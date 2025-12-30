@@ -42,42 +42,109 @@
             font-size: 14px;
             opacity: 0.9;
         }
+        .debug-info {
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            font-size: 12px;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="player">
-        <div class="station-name" id="stationName">Radio Station</div>
-        <audio id="radioPlayer" controls autoplay>
+        <div class="station-name" id="stationName">Loading...</div>
+        <audio id="radioPlayer" controls>
             <source src="" type="audio/mpeg">
             Your browser does not support the audio element.
         </audio>
-        <div class="info">Нажмите на плейер для управления воспроизведением</div>
+        <div class="info" id="stationInfo">Загрузка станции...</div>
+        <div class="debug-info" id="debugInfo"></div>
     </div>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const station = urlParams.get('station') || 'radio_record';
+        // 🔄 ИСПРАВЛЕНО: Правильное получение параметра из URL
+        function getParameterByName(name, url = window.location.href) {
+            name = name.replace(/[\[\]]/g, '\\$&');
+            var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+                results = regex.exec(url);
+            if (!results) return null;
+            if (!results[2]) return '';
+            return decodeURIComponent(results[2].replace(/\+/g, ' '));
+        }
+
+        // 🔄 ИСПРАВЛЕНО: Полный список станций с короткими ID
         const stations = {
-            'radio_record': 'https://radiorecord.hostingradio.ru/rr_main96.aacp',
-            'relax_fm': 'http://ic7.101.ru:8000/v12_1',
-            'europa_plus': 'http://ep256.hostingradio.ru:8052/europaplus256.mp3',
-            'retro_fm': 'http://retroserver.streamr.ru:8043/retro256.mp3'
+            'record': {
+                url: 'https://radiorecord.hostingradio.ru/rr_main96.aacp',
+                name: 'Radio Record',
+                genre: 'Dance, Electronic'
+            },
+            'relax': {
+                url: 'http://ic7.101.ru:8000/v12_1',
+                name: 'Relax FM',
+                genre: 'Relax, Classical'
+            },
+            'europa': {
+                url: 'http://ep256.hostingradio.ru:8052/europaplus256.mp3',
+                name: 'Europa Plus',
+                genre: 'Pop, Hits'
+            },
+            'retro': {
+                url: 'http://retroserver.streamr.ru:8043/retro256.mp3',
+                name: 'Ретро FM',
+                genre: 'Retro, 80s-90s'
+            },
+            'nashe': {
+                url: 'http://nashe1.hostingradio.ru:80/nashe-128.mp3',
+                name: 'Наше Радио',
+                genre: 'Rock, Russian Rock'
+            },
+            'monte': {
+                url: 'http://monte.hostingradio.ru:8000/montecarlo256.mp3',
+                name: 'Монте-Карло',
+                genre: 'Pop, Foreign Hits'
+            }
         };
-        
+
         const player = document.getElementById('radioPlayer');
         const stationName = document.getElementById('stationName');
-        
+        const stationInfo = document.getElementById('stationInfo');
+        const debugInfo = document.getElementById('debugInfo');
+
+        // 🔄 ИСПРАВЛЕНО: Получаем station_id из URL
+        const stationId = getParameterByName('station') || 'record';
+        const debugMode = getParameterByName('debug') === 'true';
+
+        if (debugMode) {
+            debugInfo.style.display = 'block';
+            debugInfo.innerHTML = `<b>Debug Info:</b><br>station_id: ${stationId}<br>location: ${window.location.href}`;
+        }
+
+        // 🔄 ИСПРАВЛЕНО: Проверяем существование станции
+        const station = stations[stationId] || stations['record'];
+
         // Устанавливаем название станции
-        stationName.textContent = station.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
-        
+        stationName.textContent = station.name;
+        stationInfo.textContent = station.genre;
+
         // Устанавливаем источник аудио
-        player.src = stations[station] || stations['radio_record'];
-        
+        player.src = station.url;
+
         // Автовоспроизведение с обработкой ошибок
         player.addEventListener('loadedmetadata', () => {
-            player.play().catch(e => {
-                console.log('Autoplay blocked:', e);
+            player.play().then(() => {
+                console.log(`✅ Воспроизведение начато для станции: ${station.name}`);
+            }).catch(e => {
+                console.log('🔇 Автовоспроизведение заблокировано:', e);
+                stationInfo.textContent = 'Нажмите ▶ для воспроизведения';
             });
+        });
+
+        player.addEventListener('error', (e) => {
+            console.error('❌ Ошибка аудио:', e);
+            stationInfo.textContent = '❌ Ошибка подключения к станции';
         });
     </script>
 </body>
